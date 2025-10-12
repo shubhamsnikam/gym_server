@@ -1,42 +1,65 @@
-require('dotenv').config(); // Load environment variables from .env
 const express = require('express');
 const mongoose = require('mongoose');
 const cors = require('cors');
 const path = require('path');
+const fs = require('fs');
+require('dotenv').config();
 
 const app = express();
 
-// Middleware
+// === Ensure uploads folder exists ===
+const uploadsDir = path.join(__dirname, 'uploads');
+if (!fs.existsSync(uploadsDir)) {
+  fs.mkdirSync(uploadsDir, { recursive: true });
+  console.log('📁 Created uploads directory');
+}
+
+// === Middleware ===
 app.use(cors());
 app.use(express.json());
 
-app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
+// === Serve static files ===
+app.use(
+  '/uploads',
+  express.static(uploadsDir, {
+    fallthrough: true, // allows next route to handle missing files
+  })
+);
 
-// ✅ Add a root route so Render shows something at "/"
-app.get('/', (req, res) => {
-  res.send('✅ Gym Server is running 💪');
+// === Fallback route for missing images ===
+app.get('/uploads/:filename', (req, res) => {
+  const filePath = path.join(uploadsDir, req.params.filename);
+  fs.access(filePath, fs.constants.F_OK, (err) => {
+    if (err) {
+      // If image not found, return default placeholder
+      return res.sendFile(path.join(__dirname, 'public', 'no-image.png'));
+    } else {
+      return res.sendFile(filePath);
+    }
+  });
 });
 
-// ✅ ROUTES
+// === API Routes ===
 const memberRoutes = require('./routes/memberRoutes');
 app.use('/api/members', memberRoutes);
 
-// Debugging: Confirm MONGO_URI loaded
-console.log('Loaded MONGO_URI:', process.env.MONGO_URI);
+// === Default root route ===
+app.get('/', (req, res) => {
+  res.send('✅ Sai Fitness Gym Server is running 💪');
+});
 
-// ✅ MongoDB Connection
-mongoose.connect(process.env.MONGO_URI, {
-  useNewUrlParser: true,
-  useUnifiedTopology: true,
-})
+// === Connect to MongoDB ===
+mongoose
+  .connect(process.env.MONGO_URI, {
+    useNewUrlParser: true,
+    useUnifiedTopology: true,
+  })
   .then(() => console.log('✅ MongoDB connected'))
-  .catch(err => {
+  .catch((err) => {
     console.error('❌ MongoDB connection error:', err);
-    process.exit(1); // Exit the app if DB connection fails
+    process.exit(1);
   });
 
-// ✅ Server listen
+// === Start server ===
 const PORT = process.env.PORT || 5000;
-app.listen(PORT, () => {
-  console.log(`🚀 Server running on port ${PORT}`);
-});
+app.listen(PORT, () => console.log(`🚀 Server running on port ${PORT}`));
