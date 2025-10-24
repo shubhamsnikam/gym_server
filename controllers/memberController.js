@@ -1,3 +1,6 @@
+// ✅ Load environment variables first (must be the first line)
+require('dotenv').config();
+
 const Member = require('../models/Member');
 const multer = require('multer');
 const { CloudinaryStorage } = require('multer-storage-cloudinary');
@@ -9,6 +12,12 @@ cloudinary.config({
   api_key: process.env.CLOUDINARY_API_KEY,
   api_secret: process.env.CLOUDINARY_API_SECRET,
 });
+
+// ✅ Test Cloudinary connection at startup
+cloudinary.api
+  .ping()
+  .then(() => console.log('✅ Cloudinary connected successfully:', process.env.CLOUDINARY_CLOUD_NAME))
+  .catch((err) => console.error('❌ Cloudinary connection failed:', err.message));
 
 // === Multer + Cloudinary ===
 const storage = new CloudinaryStorage({
