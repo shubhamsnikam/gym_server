@@ -1,4 +1,3 @@
-// server.js
 const express = require('express');
 const mongoose = require('mongoose');
 const cors = require('cors');
@@ -11,7 +10,7 @@ const app = express();
 app.use(cors());
 app.use(express.json());
 
-// Serve public static files (for fallback image)
+// Serve fallback static assets
 app.use('/public', express.static(path.join(__dirname, 'public')));
 
 // API routes
@@ -21,7 +20,7 @@ app.use('/api/members', memberRoutes);
 // Root
 app.get('/', (req, res) => res.send('✅ Sai Fitness Gym Server is running 💪'));
 
-// MongoDB connect
+// MongoDB
 mongoose
   .connect(process.env.MONGO_URI, {
     useNewUrlParser: true,
