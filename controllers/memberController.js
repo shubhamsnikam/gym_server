@@ -1,4 +1,4 @@
-// ✅ Load environment variables first (must be the first line)
+// ✅ Load environment variables first
 require('dotenv').config();
 
 const Member = require('../models/Member');
@@ -6,14 +6,31 @@ const multer = require('multer');
 const { CloudinaryStorage } = require('multer-storage-cloudinary');
 const cloudinary = require('cloudinary').v2;
 
+// === Debug: Verify env vars (safe for non-prod) ===
+if (process.env.NODE_ENV !== 'production') {
+  console.log('🌍 ENV Check:', {
+    CLOUDINARY_CLOUD_NAME: process.env.CLOUDINARY_CLOUD_NAME,
+    CLOUDINARY_API_KEY: !!process.env.CLOUDINARY_API_KEY,
+    CLOUDINARY_API_SECRET: !!process.env.CLOUDINARY_API_SECRET,
+  });
+}
+
 // === Cloudinary Config ===
+if (
+  !process.env.CLOUDINARY_CLOUD_NAME ||
+  !process.env.CLOUDINARY_API_KEY ||
+  !process.env.CLOUDINARY_API_SECRET
+) {
+  console.error('❌ Missing Cloudinary credentials — check Render Environment Variables!');
+}
+
 cloudinary.config({
   cloud_name: process.env.CLOUDINARY_CLOUD_NAME,
   api_key: process.env.CLOUDINARY_API_KEY,
   api_secret: process.env.CLOUDINARY_API_SECRET,
 });
 
-// ✅ Test Cloudinary connection at startup
+// ✅ Test Cloudinary connection once at startup
 cloudinary.api
   .ping()
   .then(() => console.log('✅ Cloudinary connected successfully:', process.env.CLOUDINARY_CLOUD_NAME))
@@ -31,7 +48,7 @@ const storage = new CloudinaryStorage({
 
 const upload = multer({
   storage,
-  limits: { fileSize: 1 * 1024 * 1024 }, // 1MB limit
+  limits: { fileSize: 1 * 1024 * 1024 }, // 1MB
   fileFilter: (req, file, cb) => {
     const allowed = ['image/jpeg', 'image/png', 'image/jpg'];
     if (!allowed.includes(file.mimetype)) return cb(new Error('Only JPG/PNG allowed'));
@@ -146,8 +163,15 @@ exports.updateMember = async (req, res) => {
     }
 
     const preservedFields = [
-      'name', 'address', 'dob', 'healthConditions', 'paidFee',
-      'pendingFee', 'workoutPlan', 'mobileNumber', 'emergencyContactNumber'
+      'name',
+      'address',
+      'dob',
+      'healthConditions',
+      'paidFee',
+      'pendingFee',
+      'workoutPlan',
+      'mobileNumber',
+      'emergencyContactNumber',
     ];
     for (const f of preservedFields) if (data[f] === undefined) data[f] = existing[f];
 
