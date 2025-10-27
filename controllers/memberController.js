@@ -245,3 +245,43 @@ exports.getDashboardStats = async (req, res) => {
     res.status(500).json({ message: 'Error fetching dashboard stats', error: err.message });
   }
 };
+// === Dashboard Stats ===
+exports.getDashboardStats = async (req, res) => {
+  try {
+    const members = await Member.find();
+
+    const now = new Date();
+    const totalMembers = members.length;
+    const activeMembers = members.filter(m => m.membershipEndDate && m.membershipEndDate >= now).length;
+    const expiredMembers = totalMembers - activeMembers;
+
+    const totalRevenue = members.reduce((sum, m) => sum + (m.paidFee || 0), 0);
+    const pendingFees = members.reduce((sum, m) => sum + (m.pendingFee || 0), 0);
+
+    // Monthly registrations (last 6 months)
+    const monthlyStats = Array.from({ length: 6 }).map((_, i) => {
+      const date = new Date();
+      date.setMonth(date.getMonth() - (5 - i));
+      const month = date.toLocaleString('default', { month: 'short' });
+      const year = date.getFullYear();
+      const count = members.filter(m => {
+        const created = new Date(m.createdAt);
+        return created.getMonth() === date.getMonth() && created.getFullYear() === year;
+      }).length;
+      return { month, count };
+    });
+
+    res.json({
+      totalMembers,
+      activeMembers,
+      expiredMembers,
+      totalRevenue,
+      pendingFees,
+      monthlyStats,
+    });
+  } catch (err) {
+    console.error('getDashboardStats error:', err);
+    res.status(500).json({ message: 'Error generating dashboard stats', error: err.message });
+  }
+};
+
