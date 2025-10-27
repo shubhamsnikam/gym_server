@@ -5,17 +5,21 @@ const MemberSchema = new mongoose.Schema({
   address: { type: String, required: true },
   dob: { type: Date, required: true },
   healthConditions: { type: String, default: '' },
-  membershipDuration: { type: Number, required: true, enum: [1, 3, 6, 12] },
+  
+  // ✅ Updated: Allow all 1–12 month durations
+  membershipDuration: { 
+    type: Number, 
+    required: true, 
+    enum: [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12] 
+  },
+
   membershipStartDate: { type: Date, required: true, default: Date.now },
-  membershipEndDate: { type: Date }, // will be calculated in backend
+  membershipEndDate: { type: Date }, // Calculated automatically
   paidFee: { type: Number, required: true },
   pendingFee: { type: Number, default: 0 },
   workoutPlan: { type: String, default: '' },
   bodyWeight: { type: Number },
-  bodyMeasurements: {
-    type: Object,
-    default: {}
-  },
+  bodyMeasurements: { type: Object, default: {} },
   mobileNumber: { type: String, required: true, match: /^[0-9]{10}$/ },
   emergencyContactNumber: { type: String, required: true, match: /^[0-9]{10}$/ },
   photo: { type: String, default: null },
@@ -23,7 +27,7 @@ const MemberSchema = new mongoose.Schema({
   createdAt: { type: Date, default: Date.now }
 });
 
-// Optional virtual for membership status
+// ✅ Virtual: Membership Status
 MemberSchema.virtual('membershipStatus').get(function() {
   if (!this.membershipEndDate) return 'Unknown';
   return new Date() > this.membershipEndDate ? 'Expired' : 'Active';
