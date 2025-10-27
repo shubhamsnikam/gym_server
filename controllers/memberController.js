@@ -207,50 +207,12 @@ exports.deleteMember = async (req, res) => {
   }
 };
 
-// ✅ DASHBOARD ANALYTICS
+// ✅ Dashboard Analytics (final version)
 exports.getDashboardStats = async (req, res) => {
   try {
     const members = await Member.find();
-
-    const totalMembers = members.length;
-    const activeMembers = members.filter(m => m.membershipStatus === 'Active').length;
-    const expiredMembers = totalMembers - activeMembers;
-
-    const totalRevenue = members.reduce((sum, m) => sum + (m.paidFee || 0), 0);
-    const pendingFees = members.reduce((sum, m) => sum + (m.pendingFee || 0), 0);
-
     const now = new Date();
-    const monthlyStats = Array.from({ length: 6 }).map((_, i) => {
-      const date = new Date(now.getFullYear(), now.getMonth() - i, 1);
-      const count = members.filter(m => {
-        const created = new Date(m.createdAt);
-        return created.getMonth() === date.getMonth() && created.getFullYear() === date.getFullYear();
-      }).length;
-      return {
-        month: date.toLocaleString('default', { month: 'short' }),
-        count,
-      };
-    }).reverse();
 
-    res.json({
-      totalMembers,
-      activeMembers,
-      expiredMembers,
-      totalRevenue,
-      pendingFees,
-      monthlyStats,
-    });
-  } catch (err) {
-    console.error('Dashboard stats error:', err);
-    res.status(500).json({ message: 'Error fetching dashboard stats', error: err.message });
-  }
-};
-// === Dashboard Stats ===
-exports.getDashboardStats = async (req, res) => {
-  try {
-    const members = await Member.find();
-
-    const now = new Date();
     const totalMembers = members.length;
     const activeMembers = members.filter(m => m.membershipEndDate && m.membershipEndDate >= now).length;
     const expiredMembers = totalMembers - activeMembers;
@@ -258,7 +220,6 @@ exports.getDashboardStats = async (req, res) => {
     const totalRevenue = members.reduce((sum, m) => sum + (m.paidFee || 0), 0);
     const pendingFees = members.reduce((sum, m) => sum + (m.pendingFee || 0), 0);
 
-    // Monthly registrations (last 6 months)
     const monthlyStats = Array.from({ length: 6 }).map((_, i) => {
       const date = new Date();
       date.setMonth(date.getMonth() - (5 - i));
@@ -284,4 +245,3 @@ exports.getDashboardStats = async (req, res) => {
     res.status(500).json({ message: 'Error generating dashboard stats', error: err.message });
   }
 };
-
