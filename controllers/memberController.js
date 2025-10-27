@@ -1,19 +1,10 @@
-// ✅ Load environment variables first
+// ✅ Load environment variables
 require('dotenv').config();
 
 const Member = require('../models/Member');
 const multer = require('multer');
 const { CloudinaryStorage } = require('multer-storage-cloudinary');
 const cloudinary = require('cloudinary').v2;
-
-// === Debug: Verify env vars (safe for non-prod) ===
-if (process.env.NODE_ENV !== 'production') {
-  console.log('🌍 ENV Check:', {
-    CLOUDINARY_CLOUD_NAME: process.env.CLOUDINARY_CLOUD_NAME,
-    CLOUDINARY_API_KEY: !!process.env.CLOUDINARY_API_KEY,
-    CLOUDINARY_API_SECRET: !!process.env.CLOUDINARY_API_SECRET,
-  });
-}
 
 // === Cloudinary Config ===
 if (
@@ -30,13 +21,15 @@ cloudinary.config({
   api_secret: process.env.CLOUDINARY_API_SECRET,
 });
 
-// ✅ Test Cloudinary connection once at startup
-cloudinary.api
-  .ping()
-  .then(() => console.log('✅ Cloudinary connected successfully:', process.env.CLOUDINARY_CLOUD_NAME))
-  .catch((err) => console.error('❌ Cloudinary connection failed:', err.message));
+// ✅ Optional: Ping once (development only)
+if (process.env.NODE_ENV !== 'production') {
+  cloudinary.api
+    .ping()
+    .then(() => console.log('✅ Cloudinary connected:', process.env.CLOUDINARY_CLOUD_NAME))
+    .catch((err) => console.error('❌ Cloudinary connection failed:', err.message));
+}
 
-// === Multer + Cloudinary ===
+// === Multer + Cloudinary Storage ===
 const storage = new CloudinaryStorage({
   cloudinary,
   params: {
@@ -69,15 +62,13 @@ exports.upload = (req, res, next) => {
   });
 };
 
-// === Helper: Parse Form Data ===
+// === Helper ===
 const parseFormData = (body) => {
   const result = {};
   for (let key in body) {
     let val = body[key];
     if (typeof val === 'string' && (val.startsWith('{') || val.startsWith('['))) {
-      try {
-        val = JSON.parse(val);
-      } catch {}
+      try { val = JSON.parse(val); } catch {}
     }
     if (!isNaN(val) && val !== '' && val !== true && val !== false) val = Number(val);
     result[key] = val === '' ? undefined : val;
@@ -85,7 +76,7 @@ const parseFormData = (body) => {
   return result;
 };
 
-// ===== Controllers =====
+// === Controllers ===
 
 // GET all members
 exports.getAllMembers = async (req, res) => {
@@ -98,7 +89,7 @@ exports.getAllMembers = async (req, res) => {
   }
 };
 
-// GET member by ID
+// GET by ID
 exports.getMemberById = async (req, res) => {
   try {
     const member = await Member.findById(req.params.id);
@@ -110,7 +101,7 @@ exports.getMemberById = async (req, res) => {
   }
 };
 
-// CREATE member
+// CREATE
 exports.createMember = async (req, res) => {
   try {
     let data = parseFormData(req.body);
@@ -136,7 +127,7 @@ exports.createMember = async (req, res) => {
   }
 };
 
-// UPDATE member
+// UPDATE
 exports.updateMember = async (req, res) => {
   try {
     let data = parseFormData(req.body);
@@ -204,7 +195,7 @@ exports.updateMember = async (req, res) => {
   }
 };
 
-// DELETE member
+// DELETE
 exports.deleteMember = async (req, res) => {
   try {
     const deleted = await Member.findByIdAndDelete(req.params.id);
