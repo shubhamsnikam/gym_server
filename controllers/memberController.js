@@ -68,7 +68,9 @@ const parseFormData = (body) => {
   for (let key in body) {
     let val = body[key];
     if (typeof val === 'string' && (val.startsWith('{') || val.startsWith('['))) {
-      try { val = JSON.parse(val); } catch {}
+      try {
+        val = JSON.parse(val);
+      } catch {}
     }
     if (!isNaN(val) && val !== '' && val !== true && val !== false) val = Number(val);
     result[key] = val === '' ? undefined : val;
@@ -207,7 +209,7 @@ exports.deleteMember = async (req, res) => {
   }
 };
 
-// ✅ Dashboard Analytics (final version)
+// ✅ Dashboard Analytics (Fixed Pending Fee Logic)
 exports.getDashboardStats = async (req, res) => {
   try {
     const members = await Member.find();
@@ -217,9 +219,25 @@ exports.getDashboardStats = async (req, res) => {
     const activeMembers = members.filter(m => m.membershipEndDate && m.membershipEndDate >= now).length;
     const expiredMembers = totalMembers - activeMembers;
 
-    const totalRevenue = members.reduce((sum, m) => sum + (m.paidFee || 0), 0);
-    const pendingFees = members.reduce((sum, m) => sum + (m.pendingFee || 0), 0);
+    // ✅ Improved Fee Calculation
+    let totalRevenue = 0;
+    let pendingFees = 0;
+    const assumedMonthlyFee = 1000; // change this if your plan has a fixed fee
 
+    members.forEach((m) => {
+      const paid = Number(m.paidFee) || 0;
+      let pending = Number(m.pendingFee);
+
+      if (isNaN(pending)) {
+        const totalFee = (Number(m.membershipDuration) || 0) * assumedMonthlyFee;
+        pending = Math.max(totalFee - paid, 0);
+      }
+
+      totalRevenue += paid;
+      pendingFees += pending;
+    });
+
+    // ✅ Monthly new registrations
     const monthlyStats = Array.from({ length: 6 }).map((_, i) => {
       const date = new Date();
       date.setMonth(date.getMonth() - (5 - i));
