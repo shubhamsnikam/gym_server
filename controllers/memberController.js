@@ -235,7 +235,7 @@ exports.deleteMember = async (req, res) => {
   }
 };
 
-// ✅ Dashboard Analytics (Fixed Pending Fee Logic)
+// ✅ Dashboard Analytics (FINAL FIXED Pending Fee Logic)
 exports.getDashboardStats = async (req, res) => {
   try {
     const members = await Member.find();
@@ -247,29 +247,27 @@ exports.getDashboardStats = async (req, res) => {
     ).length;
     const expiredMembers = totalMembers - activeMembers;
 
-    // ✅ Improved Fee Calculation with .env Support
+    // ✅ Fee Calculation with guaranteed numeric values
+    const DEFAULT_MONTHLY_FEE = Number(process.env.DEFAULT_MONTHLY_FEE) || 1000;
     let totalRevenue = 0;
     let pendingFees = 0;
-    const DEFAULT_MONTHLY_FEE = Number(process.env.DEFAULT_MONTHLY_FEE) || 1000;
 
-    members.forEach((m) => {
+    for (const m of members) {
       const paid = Number(m.paidFee) || 0;
       let pending = Number(m.pendingFee);
 
-      if (!pending || isNaN(pending)) {
-        const months =
-          Number(m.membershipDuration) && Number(m.membershipDuration) > 0
-            ? Number(m.membershipDuration)
-            : 1;
+      // If pending is missing or zero, calculate it
+      if (!pending || pending === 0 || isNaN(pending)) {
+        const months = Number(m.membershipDuration) || 1;
         const totalFee = months * DEFAULT_MONTHLY_FEE;
         pending = Math.max(totalFee - paid, 0);
       }
 
       totalRevenue += paid;
       pendingFees += pending;
-    });
+    }
 
-    // ✅ Monthly new registrations
+    // ✅ Monthly new registrations (last 6 months)
     const monthlyStats = Array.from({ length: 6 }).map((_, i) => {
       const date = new Date();
       date.setMonth(date.getMonth() - (5 - i));
@@ -285,6 +283,12 @@ exports.getDashboardStats = async (req, res) => {
       return { month, count };
     });
 
+    // ✅ Log summary for debugging
+    console.log("📊 Dashboard Stats Summary:");
+    console.log("Members:", totalMembers);
+    console.log("Revenue (Paid):", totalRevenue);
+    console.log("Pending (Calculated):", pendingFees);
+
     res.json({
       totalMembers,
       activeMembers,
@@ -295,8 +299,9 @@ exports.getDashboardStats = async (req, res) => {
     });
   } catch (err) {
     console.error("getDashboardStats error:", err);
-    res
-      .status(500)
-      .json({ message: "Error generating dashboard stats", error: err.message });
+    res.status(500).json({
+      message: "Error generating dashboard stats",
+      error: err.message,
+    });
   }
 };
