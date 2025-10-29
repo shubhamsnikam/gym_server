@@ -1,10 +1,10 @@
 // ✅ Load environment variables
-require('dotenv').config();
+require("dotenv").config();
 
-const Member = require('../models/Member');
-const multer = require('multer');
-const { CloudinaryStorage } = require('multer-storage-cloudinary');
-const cloudinary = require('cloudinary').v2;
+const Member = require("../models/Member");
+const multer = require("multer");
+const { CloudinaryStorage } = require("multer-storage-cloudinary");
+const cloudinary = require("cloudinary").v2;
 
 // === Cloudinary Config ===
 if (
@@ -12,7 +12,9 @@ if (
   !process.env.CLOUDINARY_API_KEY ||
   !process.env.CLOUDINARY_API_SECRET
 ) {
-  console.error('❌ Missing Cloudinary credentials — check Render Environment Variables!');
+  console.error(
+    "❌ Missing Cloudinary credentials — check Render Environment Variables!"
+  );
 }
 
 cloudinary.config({
@@ -22,20 +24,24 @@ cloudinary.config({
 });
 
 // ✅ Optional: Ping once (development only)
-if (process.env.NODE_ENV !== 'production') {
+if (process.env.NODE_ENV !== "production") {
   cloudinary.api
     .ping()
-    .then(() => console.log('✅ Cloudinary connected:', process.env.CLOUDINARY_CLOUD_NAME))
-    .catch((err) => console.error('❌ Cloudinary connection failed:', err.message));
+    .then(() =>
+      console.log("✅ Cloudinary connected:", process.env.CLOUDINARY_CLOUD_NAME)
+    )
+    .catch((err) =>
+      console.error("❌ Cloudinary connection failed:", err.message)
+    );
 }
 
 // === Multer + Cloudinary Storage ===
 const storage = new CloudinaryStorage({
   cloudinary,
   params: {
-    folder: 'gym_members',
-    allowed_formats: ['jpg', 'jpeg', 'png'],
-    transformation: [{ width: 1000, crop: 'limit' }],
+    folder: "gym_members",
+    allowed_formats: ["jpg", "jpeg", "png"],
+    transformation: [{ width: 1000, crop: "limit" }],
   },
 });
 
@@ -43,17 +49,20 @@ const upload = multer({
   storage,
   limits: { fileSize: 1 * 1024 * 1024 }, // 1MB
   fileFilter: (req, file, cb) => {
-    const allowed = ['image/jpeg', 'image/png', 'image/jpg'];
-    if (!allowed.includes(file.mimetype)) return cb(new Error('Only JPG/PNG allowed'));
+    const allowed = ["image/jpeg", "image/png", "image/jpg"];
+    if (!allowed.includes(file.mimetype))
+      return cb(new Error("Only JPG/PNG allowed"));
     cb(null, true);
   },
-}).single('photo');
+}).single("photo");
 
 exports.upload = (req, res, next) => {
   upload(req, res, function (err) {
     if (err instanceof multer.MulterError) {
-      if (err.code === 'LIMIT_FILE_SIZE')
-        return res.status(400).json({ message: 'Image must be smaller than 1MB' });
+      if (err.code === "LIMIT_FILE_SIZE")
+        return res
+          .status(400)
+          .json({ message: "Image must be smaller than 1MB" });
       return res.status(400).json({ message: `Upload error: ${err.message}` });
     } else if (err) {
       return res.status(400).json({ message: err.message });
@@ -67,13 +76,14 @@ const parseFormData = (body) => {
   const result = {};
   for (let key in body) {
     let val = body[key];
-    if (typeof val === 'string' && (val.startsWith('{') || val.startsWith('['))) {
+    if (typeof val === "string" && (val.startsWith("{") || val.startsWith("["))) {
       try {
         val = JSON.parse(val);
       } catch {}
     }
-    if (!isNaN(val) && val !== '' && val !== true && val !== false) val = Number(val);
-    result[key] = val === '' ? undefined : val;
+    if (!isNaN(val) && val !== "" && val !== true && val !== false)
+      val = Number(val);
+    result[key] = val === "" ? undefined : val;
   }
   return result;
 };
@@ -87,7 +97,9 @@ exports.getAllMembers = async (req, res) => {
     res.status(200).json(members);
   } catch (err) {
     console.error(err);
-    res.status(500).json({ message: 'Error fetching members', error: err.message });
+    res
+      .status(500)
+      .json({ message: "Error fetching members", error: err.message });
   }
 };
 
@@ -95,11 +107,13 @@ exports.getAllMembers = async (req, res) => {
 exports.getMemberById = async (req, res) => {
   try {
     const member = await Member.findById(req.params.id);
-    if (!member) return res.status(404).json({ message: 'Member not found' });
+    if (!member) return res.status(404).json({ message: "Member not found" });
     res.json(member);
   } catch (err) {
     console.error(err);
-    res.status(500).json({ message: 'Error fetching member', error: err.message });
+    res
+      .status(500)
+      .json({ message: "Error fetching member", error: err.message });
   }
 };
 
@@ -112,7 +126,10 @@ exports.createMember = async (req, res) => {
     data.previousWeights = data.previousWeights || [];
     data.bodyMeasurements = data.bodyMeasurements || {};
 
-    const start = data.membershipStartDate ? new Date(data.membershipStartDate) : new Date();
+    const start = data.membershipStartDate
+      ? new Date(data.membershipStartDate)
+      : new Date();
+
     if (data.membershipDuration) {
       const end = new Date(start);
       end.setMonth(end.getMonth() + Number(data.membershipDuration));
@@ -124,8 +141,10 @@ exports.createMember = async (req, res) => {
     const saved = await member.save();
     res.status(201).json(saved);
   } catch (err) {
-    console.error('createMember error:', err);
-    res.status(400).json({ message: 'Error creating member', error: err.message });
+    console.error("createMember error:", err);
+    res
+      .status(400)
+      .json({ message: "Error creating member", error: err.message });
   }
 };
 
@@ -134,7 +153,7 @@ exports.updateMember = async (req, res) => {
   try {
     let data = parseFormData(req.body);
     const existing = await Member.findById(req.params.id);
-    if (!existing) return res.status(404).json({ message: 'Member not found' });
+    if (!existing) return res.status(404).json({ message: "Member not found" });
 
     if (req.file && req.file.path) data.photo = req.file.path;
     else data.photo = existing.photo;
@@ -148,7 +167,10 @@ exports.updateMember = async (req, res) => {
       ? [...existing.previousWeights]
       : [];
 
-    if (data.bodyWeight !== undefined && Number(data.bodyWeight) !== Number(existing.bodyWeight)) {
+    if (
+      data.bodyWeight !== undefined &&
+      Number(data.bodyWeight) !== Number(existing.bodyWeight)
+    ) {
       if (existing.bodyWeight !== undefined && existing.bodyWeight !== null)
         data.previousWeights.push({ date: new Date(), weight: existing.bodyWeight });
     } else {
@@ -156,15 +178,15 @@ exports.updateMember = async (req, res) => {
     }
 
     const preservedFields = [
-      'name',
-      'address',
-      'dob',
-      'healthConditions',
-      'paidFee',
-      'pendingFee',
-      'workoutPlan',
-      'mobileNumber',
-      'emergencyContactNumber',
+      "name",
+      "address",
+      "dob",
+      "healthConditions",
+      "paidFee",
+      "pendingFee",
+      "workoutPlan",
+      "mobileNumber",
+      "emergencyContactNumber",
     ];
     for (const f of preservedFields) if (data[f] === undefined) data[f] = existing[f];
 
@@ -192,8 +214,10 @@ exports.updateMember = async (req, res) => {
 
     res.json(updated);
   } catch (err) {
-    console.error('updateMember error:', err);
-    res.status(400).json({ message: 'Error updating member', error: err.message });
+    console.error("updateMember error:", err);
+    res
+      .status(400)
+      .json({ message: "Error updating member", error: err.message });
   }
 };
 
@@ -201,11 +225,13 @@ exports.updateMember = async (req, res) => {
 exports.deleteMember = async (req, res) => {
   try {
     const deleted = await Member.findByIdAndDelete(req.params.id);
-    if (!deleted) return res.status(404).json({ message: 'Member not found' });
-    res.json({ message: 'Member deleted successfully' });
+    if (!deleted) return res.status(404).json({ message: "Member not found" });
+    res.json({ message: "Member deleted successfully" });
   } catch (err) {
     console.error(err);
-    res.status(500).json({ message: 'Error deleting member', error: err.message });
+    res
+      .status(500)
+      .json({ message: "Error deleting member", error: err.message });
   }
 };
 
@@ -216,20 +242,26 @@ exports.getDashboardStats = async (req, res) => {
     const now = new Date();
 
     const totalMembers = members.length;
-    const activeMembers = members.filter(m => m.membershipEndDate && m.membershipEndDate >= now).length;
+    const activeMembers = members.filter(
+      (m) => m.membershipEndDate && m.membershipEndDate >= now
+    ).length;
     const expiredMembers = totalMembers - activeMembers;
 
-    // ✅ Improved Fee Calculation
+    // ✅ Improved Fee Calculation with .env Support
     let totalRevenue = 0;
     let pendingFees = 0;
-    const assumedMonthlyFee = 1000; // change this if your plan has a fixed fee
+    const DEFAULT_MONTHLY_FEE = Number(process.env.DEFAULT_MONTHLY_FEE) || 1000;
 
     members.forEach((m) => {
       const paid = Number(m.paidFee) || 0;
       let pending = Number(m.pendingFee);
 
-      if (isNaN(pending)) {
-        const totalFee = (Number(m.membershipDuration) || 0) * assumedMonthlyFee;
+      if (!pending || isNaN(pending)) {
+        const months =
+          Number(m.membershipDuration) && Number(m.membershipDuration) > 0
+            ? Number(m.membershipDuration)
+            : 1;
+        const totalFee = months * DEFAULT_MONTHLY_FEE;
         pending = Math.max(totalFee - paid, 0);
       }
 
@@ -241,11 +273,14 @@ exports.getDashboardStats = async (req, res) => {
     const monthlyStats = Array.from({ length: 6 }).map((_, i) => {
       const date = new Date();
       date.setMonth(date.getMonth() - (5 - i));
-      const month = date.toLocaleString('default', { month: 'short' });
+      const month = date.toLocaleString("default", { month: "short" });
       const year = date.getFullYear();
-      const count = members.filter(m => {
+      const count = members.filter((m) => {
         const created = new Date(m.createdAt);
-        return created.getMonth() === date.getMonth() && created.getFullYear() === year;
+        return (
+          created.getMonth() === date.getMonth() &&
+          created.getFullYear() === year
+        );
       }).length;
       return { month, count };
     });
@@ -259,7 +294,9 @@ exports.getDashboardStats = async (req, res) => {
       monthlyStats,
     });
   } catch (err) {
-    console.error('getDashboardStats error:', err);
-    res.status(500).json({ message: 'Error generating dashboard stats', error: err.message });
+    console.error("getDashboardStats error:", err);
+    res
+      .status(500)
+      .json({ message: "Error generating dashboard stats", error: err.message });
   }
 };
